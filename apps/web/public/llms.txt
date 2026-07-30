@@ -1,0 +1,10 @@
+# idee-cli — Idempotent Dev Environment Engine
+
+idee-cli is a Windows-native developer environment reconciliation tool with a companion telemetry dashboard.
+
+## Core Concepts
+- team-setup.json: Authoritative baseline specification committed to the team repo.
+- local-override.json: Developer personal overrides stored in ~/.ideefy/local-override.json.
+- Keyed Merge: Packages are merged by ID. Locked baseline fields cannot be overridden.
+- Topological Execution: Kahn's DAG sorting resolves install order and hard-fails on cycles.
+- Telemetry: Append-only telemetry engine tracking org-wide developer environment parity.

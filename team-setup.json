@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "name": "Engineering Team Baseline Environment",
+  "packages": [
+    {
+      "id": "Git.Git",
+      "name": "Git for Windows",
+      "version": "2.45.0",
+      "locked": true,
+      "dependsOn": []
+    },
+    {
+      "id": "Nodejs.Nodejs",
+      "name": "Node.js LTS",
+      "version": "22.0.0",
+      "locked": true,
+      "dependsOn": ["Git.Git"]
+    },
+    {
+      "id": "Microsoft.VisualStudioCode",
+      "name": "Visual Studio Code",
+      "locked": false,
+      "dependsOn": ["Nodejs.Nodejs"]
+    }
+  ]
+}

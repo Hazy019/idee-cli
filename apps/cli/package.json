@@ -1,0 +1,28 @@
+{
+  "name": "idee-cli",
+  "version": "1.0.0",
+  "description": "Windows-native developer environment engine",
+  "bin": {
+    "idee": "./bin/run.js"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test dist/**/*.test.js"
+  },
+  "oclif": {
+    "bin": "idee",
+    "commands": "./dist/commands",
+    "dirname": "idee",
+    "topicSeparator": " "
+  },
+  "dependencies": {
+    "@idee-cli/shared": "*",
+    "@oclif/core": "^4.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}

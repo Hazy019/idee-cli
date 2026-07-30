@@ -1,0 +1,11 @@
+User-agent: *
+Disallow: /dashboard/
+Disallow: /service-tokens/
+Disallow: /device/
+Disallow: /api/
+Allow: /
+Allow: /privacy
+Allow: /terms
+Allow: /security
+
+Sitemap: https://idee-cli.dev/sitemap.xml
