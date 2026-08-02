@@ -1,9 +1,9 @@
 import * as crypto from 'node:crypto';
 
 export interface SeedData {
-  organizations: Array<{ id: string; name: string }>;
+  organizations: Array<{ id: string; name: string; slug?: string; created_at?: string }>;
   users: Array<{ id: string; email: string; organization_id: string }>;
-  serviceAccounts: Array<{ id: string; organization_id: string; name: string; token_hash: string; expires_at: string }>;
+  serviceAccounts: Array<{ id: string; organization_id?: string; name: string; token_hash: string; expires_at: string; status?: 'active' | 'warning' | 'expired'; daysUntilExpiry?: number }>;
   telemetryLogs: Array<{
     id: string;
     organization_id: string;
@@ -16,6 +16,8 @@ export interface SeedData {
     override_packages: string[];
     timestamp: string;
   }>;
+  auditLogs?: Array<any>;
+  machines?: Array<any>;
 }
 
 export function generateSeedData(orgCount = 30, usersPerOrg = 35, telemetryPerOrg = 330): SeedData {
@@ -40,7 +42,7 @@ export function generateSeedData(orgCount = 30, usersPerOrg = 35, telemetryPerOr
   for (let o = 1; o <= orgCount; o++) {
     const orgId = crypto.randomUUID();
     const orgName = `Engineering Org ${o}`;
-    data.organizations.push({ id: orgId, name: orgName });
+    data.organizations.push({ id: orgId, name: orgName, slug: `engineering-org-${o}`, created_at: new Date().toISOString() });
 
     // Seed users
     for (let u = 1; u <= usersPerOrg; u++) {
@@ -60,6 +62,8 @@ export function generateSeedData(orgCount = 30, usersPerOrg = 35, telemetryPerOr
       name: `CI Service Token Org ${o}`,
       token_hash: crypto.createHash('sha256').update(`service-token-${orgId}`).digest('hex'),
       expires_at: expiresAt.toISOString(),
+      status: o % 2 === 0 ? 'warning' : 'active',
+      daysUntilExpiry: o % 2 === 0 ? 10 : 60,
     });
 
     // Seed Telemetry Logs
