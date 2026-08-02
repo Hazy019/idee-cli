@@ -25,9 +25,9 @@ export const metadata: Metadata = {
     'Telemetry Parity Grid',
   ],
   icons: {
-    icon: '/Logo-Transparent.png',
-    shortcut: '/Logo-Transparent.png',
-    apple: '/Logo-Transparent.png',
+    icon: '/Logo.png',
+    shortcut: '/Logo.png',
+    apple: '/Logo.png',
   },
   openGraph: {
     title: 'IDEE-CLI — Idempotent Dev Environment Engine | Kyrell Santillan & Hazy',
