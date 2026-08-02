@@ -19,8 +19,17 @@ export function AppHeader() {
       .then((res) => res.json())
       .then((data) => {
         if (data.logs && Array.isArray(data.logs) && data.logs.length > 0) {
-          // Extract unique machine hashes from real received telemetry logs
-          const uniqueHashes = Array.from(new Set(data.logs.map((l: any) => l.machine_hash))) as string[];
+          const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).getTime();
+          
+          // Filter to runs received within the last 15 minutes
+          const recentLogs = data.logs.filter((l: any) => {
+            const timestamp = new Date(l.timestamp).getTime();
+            return timestamp >= fifteenMinutesAgo;
+          });
+
+          const targetLogs = recentLogs.length > 0 ? recentLogs : data.logs.slice(0, 1);
+          const uniqueHashes = Array.from(new Set(targetLogs.map((l: any) => l.machine_hash))) as string[];
+
           const realMembers = uniqueHashes.slice(0, 5).map((hash) => ({
             initials: hash.substring(0, 2).toUpperCase(),
             hash,
@@ -68,24 +77,16 @@ export function AppHeader() {
             >
               [Service Tokens]
             </Link>
-            <Link
-              href="/device"
-              className={`px-3 py-1.5 rounded-xl border-2 border-[#002B2B] transition-all ${
-                pathname === '/device'
-                  ? 'bg-[#002B2B] text-[#88FF44] shadow-[2px_2px_0px_#002B2B]'
-                  : 'bg-white text-[#002B2B] hover:bg-[#88FF44]/20'
-              }`}
-            >
-              [Device Flow]
-            </Link>
           </nav>
         </div>
 
-        {/* Dynamic Real Member Avatar Callout (Zero Dummies) */}
+        {/* Dynamic Real Active Workstation Callout */}
         <div className="flex items-center space-x-4">
           {activeMembers.length > 0 ? (
             <div className="hidden md:flex items-center space-x-3 px-3 py-1.5 rounded-xl bg-white border-2 border-[#002B2B] shadow-sm">
-              <div className="text-[11px] font-mono text-[#002B2B] font-bold">[Active Workstations]</div>
+              <div className="text-[11px] font-mono text-[#002B2B] font-bold">
+                [{activeMembers.length} Active Workstation{activeMembers.length > 1 ? 's' : ''}]
+              </div>
               <div className="flex items-center -space-x-1.5">
                 {activeMembers.map((member) => (
                   <div

@@ -8,13 +8,21 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loggingIn, setLoggingIn] = useState(false);
+  const [cooldown, setCooldown] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (cooldown || loggingIn) return;
+
     setErrorMessage('');
     setLoggingIn(true);
+    setCooldown(true);
+
+    // 3-second submit button cooldown to prevent click spamming
+    setTimeout(() => setCooldown(false), 3000);
 
     try {
       if (isSupabaseConfigured && supabase) {
@@ -71,7 +79,7 @@ export default function LoginPage() {
         </div>
       </header>
 
-      {/* Perfectly Centered Login Card */}
+      {/* Centered Login Card */}
       <main className="flex-1 flex items-center justify-center p-6 my-auto">
         <div className="w-full max-w-md bg-white border-2 border-[#002B2B] rounded-2xl p-8 sm:p-10 stacked-card-shadow space-y-6">
           
@@ -117,28 +125,38 @@ export default function LoginPage() {
                   Forgot?
                 </Link>
               </div>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                className="w-full px-4 py-2.5 rounded-xl bg-[#F8F7F3] border border-[#002B2B]/20 text-xs text-[#002B2B] placeholder:text-[#002B2B]/40 focus:outline-none focus:border-[#002B2B] focus:ring-2 focus:ring-[#002B2B]/20 font-sans"
-              />
+
+              {/* Password Input with Show/Hide Toggle Button */}
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full px-4 py-2.5 pr-10 rounded-xl bg-[#F8F7F3] border border-[#002B2B]/20 text-xs text-[#002B2B] placeholder:text-[#002B2B]/40 focus:outline-none focus:border-[#002B2B] focus:ring-2 focus:ring-[#002B2B]/20 font-sans"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#002B2B]/60 hover:text-[#002B2B] text-xs font-mono font-bold"
+                  title={showPassword ? 'Hide Password' : 'Show Password'}
+                >
+                  {showPassword ? '👁 Hide' : '👁 Show'}
+                </button>
+              </div>
             </div>
 
-            {/* Monospace Code Hint Structure */}
             <div className="p-3 rounded-lg bg-[#002B2B]/5 border border-[#002B2B]/10 font-mono text-[11px] text-[#002B2B]/70">
               <span className="text-[#002B2B] font-bold">&lt;hint-structure&gt;:</span> Authenticate via CLI using <span className="text-[#002B2B] font-bold">idee login --device-code</span>
             </div>
 
-            {/* Primary Lime Green Button */}
             <button
               type="submit"
-              disabled={loggingIn}
-              className="w-full py-3.5 px-6 rounded-xl bg-[#88FF44] hover:bg-[#77EE33] text-[#002B2B] font-extrabold text-xs uppercase tracking-wider border-2 border-[#002B2B] shadow-[3px_3px_0px_#002B2B] transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#002B2B]"
+              disabled={loggingIn || cooldown}
+              className="w-full py-3.5 px-6 rounded-xl bg-[#88FF44] hover:bg-[#77EE33] disabled:opacity-50 text-[#002B2B] font-extrabold text-xs uppercase tracking-wider border-2 border-[#002B2B] shadow-[3px_3px_0px_#002B2B] transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#002B2B]"
             >
-              {loggingIn ? '[Authenticating...]' : '[Sign In to Dashboard]'}
+              {cooldown ? '[Please wait...]' : loggingIn ? '[Authenticating...]' : '[Sign In to Dashboard]'}
             </button>
           </form>
 
@@ -167,7 +185,6 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Device Flow Shortcut Link */}
           <div className="text-center pt-2 border-t border-[#002B2B]/10">
             <Link href="/device" className="text-xs font-bold text-[#002B2B] hover:underline font-mono">
               [Enter CLI Device Authorization Code &rarr;]
@@ -176,7 +193,7 @@ export default function LoginPage() {
         </div>
       </main>
 
-      {/* Footer with Same Tab Transparency Links */}
+      {/* Footer */}
       <footer className="max-w-7xl w-full mx-auto text-center p-6 text-xs text-[#002B2B]/60 font-mono space-y-2">
         <div>
           IDEE-CLI &bull; Declarative Dev Environment Engine &bull; All Rights Reserved

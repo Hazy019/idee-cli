@@ -133,3 +133,31 @@ CREATE POLICY "Authenticated users can insert audit logs"
 CREATE POLICY "Org members can select audit logs"
     ON public.audit_logs FOR SELECT
     USING (organization_id IN (SELECT private.user_org_ids()));
+
+-- Trigger to automatically create a public.users and public.organizations record when a user signs up via Supabase Auth
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+DECLARE
+    new_org_id UUID;
+    org_name TEXT;
+BEGIN
+    org_name := COALESCE(new.raw_user_meta_data->>'organization_name', 'Engineering Org');
+    
+    INSERT INTO public.organizations (name, slug)
+    VALUES (org_name, LOWER(REGEXP_REPLACE(org_name, '[^a-zA-Z0-9]', '-', 'g')))
+    RETURNING id INTO new_org_id;
+
+    INSERT INTO public.users (id, email, organization_id)
+    VALUES (new.id, new.email, new_org_id);
+
+    INSERT INTO public.org_members (user_id, organization_id, role)
+    VALUES (new.id, new_org_id, 'admin');
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+

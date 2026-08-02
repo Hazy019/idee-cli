@@ -1,4 +1,4 @@
-import { generateSeedData, SeedData } from './seed-data';
+import { SeedData } from './seed-data';
 
 class InMemoryStore {
   private data: SeedData;
@@ -8,7 +8,30 @@ class InMemoryStore {
   >();
 
   constructor() {
-    this.data = generateSeedData(5, 10, 50);
+    this.data = {
+      organizations: [
+        {
+          id: '00000000-0000-0000-0000-000000000001',
+          name: 'Engineering Org',
+          slug: 'engineering-org',
+          created_at: new Date().toISOString(),
+        },
+      ],
+      users: [],
+      machines: [],
+      telemetryLogs: [],
+      serviceAccounts: [
+        {
+          id: 'sa-1',
+          name: 'GitHub Actions CI Main Runner',
+          token_hash: 'st_8a7f901...3b9',
+          expires_at: new Date(Date.now() + 45 * 86400000).toISOString(),
+          status: 'active',
+          daysUntilExpiry: 45,
+        },
+      ],
+      auditLogs: [],
+    };
   }
 
   public getTelemetryLogs() {

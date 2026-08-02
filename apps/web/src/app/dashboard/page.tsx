@@ -43,6 +43,10 @@ export default function DashboardPage() {
   const [copied, setCopied] = useState<boolean>(false);
   const [mounted, setMounted] = useState<boolean>(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 5;
+
   useEffect(() => {
     setMounted(true);
     fetch('/api/telemetry-list')
@@ -71,6 +75,10 @@ export default function DashboardPage() {
   ).length;
   const parityRate = totalMachines > 0 ? Math.round((inParityCount / totalMachines) * 100) : 100;
   const totalFailed = filteredLogs.filter((l) => l.packages_failed.length > 0).length;
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredLogs.length / pageSize) || 1;
+  const paginatedLogs = filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const copyTelemetryLog = (log: TelemetryLog) => {
     navigator.clipboard.writeText(JSON.stringify(log, null, 2));
@@ -160,7 +168,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Interactive Telemetry Table Container */}
+      {/* Interactive Telemetry Table Container with Clean Pagination */}
       <div className="rounded-2xl bg-white border-2 border-[#002B2B] stacked-card-shadow overflow-hidden space-y-4 p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center space-x-3 flex-1 max-w-md">
@@ -168,7 +176,10 @@ export default function DashboardPage() {
               type="text"
               placeholder="Search machine GUID hash..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full px-4 py-2 rounded-xl bg-[#F8F7F3] border border-[#002B2B]/20 text-xs font-mono text-[#002B2B] placeholder:text-[#002B2B]/40 focus:outline-none focus:border-[#002B2B]"
             />
           </div>
@@ -178,7 +189,10 @@ export default function DashboardPage() {
               <input
                 type="checkbox"
                 checked={showCiRuns}
-                onChange={(e) => setShowCiRuns(e.target.checked)}
+                onChange={(e) => {
+                  setShowCiRuns(e.target.checked);
+                  setCurrentPage(1);
+                }}
                 className="rounded border-[#002B2B] text-[#002B2B] focus:ring-[#88FF44]"
               />
               <span className="text-[#002B2B]/80 font-bold">Show CI runs</span>
@@ -211,72 +225,101 @@ export default function DashboardPage() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto border-2 border-[#002B2B] rounded-xl">
-            <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-[#002B2B] text-white uppercase tracking-wider">
-                <tr>
-                  <th className="p-3.5">Machine GUID Hash</th>
-                  <th className="p-3.5">Type</th>
-                  {REQUIRED_BASELINE_PACKAGES.map((pkg) => (
-                    <th key={pkg} className="p-3.5 text-center">
-                      {pkg.split('.')[pkg.split('.').length - 1].toUpperCase()}
-                    </th>
-                  ))}
-                  <th className="p-3.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#002B2B]/10 bg-white">
-                {filteredLogs.map((log) => {
-                  const hasFailed = log.packages_failed.length > 0;
-                  return (
-                    <tr key={log.id} className="hover:bg-[#F8F7F3] transition-colors">
-                      <td className="p-3.5 font-bold text-[#002B2B]">
-                        {log.machine_hash.substring(0, 16)}...
-                      </td>
-                      <td className="p-3.5">
-                        <span className="px-2 py-0.5 rounded bg-[#002B2B]/5 text-[#002B2B] text-[10px] font-bold border border-[#002B2B]/20 uppercase">
-                          {log.source}
-                        </span>
-                      </td>
+          <>
+            <div className="overflow-x-auto border-2 border-[#002B2B] rounded-xl">
+              <table className="w-full text-left text-xs font-mono">
+                <thead className="bg-[#002B2B] text-white uppercase tracking-wider">
+                  <tr>
+                    <th className="p-3.5">Machine GUID Hash</th>
+                    <th className="p-3.5">Type</th>
+                    {REQUIRED_BASELINE_PACKAGES.map((pkg) => (
+                      <th key={pkg} className="p-3.5 text-center">
+                        {pkg.split('.')[pkg.split('.').length - 1].toUpperCase()}
+                      </th>
+                    ))}
+                    <th className="p-3.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#002B2B]/10 bg-white">
+                  {paginatedLogs.map((log) => {
+                    const hasFailed = log.packages_failed.length > 0;
+                    return (
+                      <tr key={log.id} className="hover:bg-[#F8F7F3] transition-colors">
+                        <td className="p-3.5 font-bold text-[#002B2B]">
+                          {log.machine_hash.substring(0, 16)}...
+                        </td>
+                        <td className="p-3.5">
+                          <span className="px-2 py-0.5 rounded bg-[#002B2B]/5 text-[#002B2B] text-[10px] font-bold border border-[#002B2B]/20 uppercase">
+                            {log.source}
+                          </span>
+                        </td>
 
-                      {REQUIRED_BASELINE_PACKAGES.map((pkg) => {
-                        const isInstalled =
-                          log.packages_installed.includes(pkg) || log.packages_skipped.includes(pkg);
-                        const isFailed = log.packages_failed.some((f) => f.id === pkg);
+                        {REQUIRED_BASELINE_PACKAGES.map((pkg) => {
+                          const isInstalled =
+                            log.packages_installed.includes(pkg) || log.packages_skipped.includes(pkg);
+                          const isFailed = log.packages_failed.some((f) => f.id === pkg);
 
-                        return (
-                          <td key={pkg} className="p-3.5 text-center">
-                            {isFailed ? (
-                              <span className="px-2 py-1 rounded bg-red-200 text-red-900 font-bold border border-red-800 text-[10px]">
-                                [✖ Fail]
-                              </span>
-                            ) : isInstalled ? (
-                              <span className="px-2 py-1 rounded bg-[#88FF44] text-[#002B2B] font-bold border border-[#002B2B] text-[10px]">
-                                [✔ Parity]
-                              </span>
-                            ) : (
-                              <span className="px-2 py-1 rounded bg-amber-100 text-amber-900 font-bold border border-amber-700 text-[10px]">
-                                [⚠ Drift]
-                              </span>
-                            )}
-                          </td>
-                        );
-                      })}
+                          return (
+                            <td key={pkg} className="p-3.5 text-center">
+                              {isFailed ? (
+                                <span className="px-2 py-1 rounded bg-red-200 text-red-900 font-bold border border-red-800 text-[10px]">
+                                  [✖ Fail]
+                                </span>
+                              ) : isInstalled ? (
+                                <span className="px-2 py-1 rounded bg-[#88FF44] text-[#002B2B] font-bold border border-[#002B2B] text-[10px]">
+                                  [✔ Parity]
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 rounded bg-amber-100 text-amber-900 font-bold border border-amber-700 text-[10px]">
+                                  [⚠ Drift]
+                                </span>
+                              )}
+                            </td>
+                          );
+                        })}
 
-                      <td className="p-3.5 text-right">
-                        <button
-                          onClick={() => setSelectedLog(log)}
-                          className="px-3 py-1 rounded-lg bg-[#88FF44] text-[#002B2B] font-bold border border-[#002B2B] hover:bg-[#77EE33] transition-colors"
-                        >
-                          Inspect &rarr;
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        <td className="p-3.5 text-right">
+                          <button
+                            onClick={() => setSelectedLog(log)}
+                            className="px-3 py-1 rounded-lg bg-[#88FF44] text-[#002B2B] font-bold border border-[#002B2B] hover:bg-[#77EE33] transition-colors"
+                          >
+                            Inspect &rarr;
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="flex items-center justify-between pt-2 text-xs font-mono">
+              <div className="text-[#002B2B]/70 font-bold">
+                Showing {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, filteredLogs.length)} of {filteredLogs.length} entries
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="px-3 py-1.5 rounded-xl bg-white text-[#002B2B] font-bold border border-[#002B2B] hover:bg-[#88FF44] disabled:opacity-40 transition-colors"
+                >
+                  &larr; Prev
+                </button>
+                <span className="font-bold text-[#002B2B] px-2">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="px-3 py-1.5 rounded-xl bg-white text-[#002B2B] font-bold border border-[#002B2B] hover:bg-[#88FF44] disabled:opacity-40 transition-colors"
+                >
+                  Next &rarr;
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
@@ -314,7 +357,7 @@ export default function DashboardPage() {
 
             {selectedLog.packages_failed.length > 0 && (
               <div className="p-4 rounded-xl bg-red-500/10 border-2 border-red-600 text-xs font-mono space-y-2">
-                <div className="font-bold text-red-700 uppercase">[Failed Packages & Errors]</div>
+                <div className="font-bold text-red-700 uppercase">[Failed Packages & Error Reasons]</div>
                 {selectedLog.packages_failed.map((f) => (
                   <div key={f.id} className="text-red-800 bg-white p-2 rounded border border-red-400">
                     <span className="font-bold">{f.id}:</span> {f.reason}

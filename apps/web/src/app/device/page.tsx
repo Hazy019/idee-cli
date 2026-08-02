@@ -3,7 +3,6 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { AppHeader } from '@/components/AppHeader';
 import { LightbulbLogo } from '@/components/LightbulbLogo';
 
 function DeviceAuthorizeContent() {
@@ -32,9 +31,16 @@ function DeviceAuthorizeContent() {
 
       if (res.ok) {
         setStatus('success');
+        // Establish active session cookie upon approving device
+        document.cookie = 'idee-session=active-session; path=/; max-age=86400';
+        
+        // Auto-redirect to dashboard ONLY upon successful device approval
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 1500);
       } else {
         const data = await res.json();
-        setErrorMessage(data.error || 'Failed to authorize device.');
+        setErrorMessage(data.error || 'Failed to authorize device. Please verify your 6-digit code.');
         setStatus('error');
       }
     } catch (err: any) {
@@ -59,7 +65,7 @@ function DeviceAuthorizeContent() {
       {status === 'success' ? (
         <div className="p-4 rounded-xl bg-emerald-500/10 border-2 border-emerald-600 text-emerald-800 font-bold text-xs font-mono space-y-2">
           <div>✔ Device Authorized Successfully!</div>
-          <div className="text-[11px] font-normal text-[#002B2B]/70">You may close this browser tab and return to your terminal.</div>
+          <div className="text-[11px] font-normal text-[#002B2B]/70">Redirecting to Organization Dashboard...</div>
         </div>
       ) : (
         <form onSubmit={handleAuthorize} className="space-y-4">
@@ -80,7 +86,7 @@ function DeviceAuthorizeContent() {
 
           <button
             type="submit"
-            className="w-full py-3.5 px-6 rounded-xl bg-[#88FF44] hover:bg-[#77EE33] text-[#002B2B] font-extrabold text-xs uppercase tracking-wider border-2 border-[#002B2B] shadow-[3px_3px_0px_#002B2B] transition-all"
+            className="w-full py-3.5 px-6 rounded-xl bg-[#88FF44] hover:bg-[#77EE33] text-[#002B2B] font-extrabold text-xs uppercase tracking-wider border-2 border-[#002B2B] shadow-[3px_3px_0px_#002B2B] transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#002B2B]"
           >
             [Approve Device Session]
           </button>
@@ -88,8 +94,8 @@ function DeviceAuthorizeContent() {
       )}
 
       <div className="pt-4 border-t border-[#002B2B]/10">
-        <Link href="/dashboard" className="text-xs font-mono font-bold text-[#002B2B] hover:underline">
-          &larr; [Back to Dashboard]
+        <Link href="/login" className="text-xs font-mono font-bold text-[#002B2B] hover:underline">
+          &larr; [Back to Sign In]
         </Link>
       </div>
     </div>
@@ -98,13 +104,35 @@ function DeviceAuthorizeContent() {
 
 export default function DeviceAuthorizePage() {
   return (
-    <div className="min-h-screen bg-[#F8F7F3] text-[#002B2B] flex flex-col font-sans selection:bg-[#88FF44] selection:text-[#002B2B]">
-      <AppHeader />
+    <div className="min-h-screen bg-[#F8F7F3] text-[#002B2B] flex flex-col font-sans selection:bg-[#88FF44] selection:text-[#002B2B] dot-grid-light">
+      
+      {/* Standalone Device Authorization Header */}
+      <header className="max-w-7xl w-full mx-auto flex items-center justify-between p-6">
+        <Link href="/" className="flex items-center space-x-3">
+          <LightbulbLogo size="sm" />
+          <span className="font-extrabold text-lg text-[#002B2B] tracking-tight">IDEE-CLI</span>
+          <span className="text-[#002B2B]/30 font-mono text-xs">/ Device Authorization</span>
+        </Link>
+
+        <Link
+          href="/login"
+          className="text-xs font-mono font-bold text-[#002B2B] hover:underline"
+        >
+          [Back to Sign In &rarr;]
+        </Link>
+      </header>
+
+      {/* Main Authorize Card */}
       <main className="flex-1 flex items-center justify-center p-6 my-auto">
         <Suspense fallback={<div className="text-center p-8 font-mono text-xs text-[#002B2B]/70">Loading device authorization...</div>}>
           <DeviceAuthorizeContent />
         </Suspense>
       </main>
+
+      {/* Footer */}
+      <footer className="max-w-7xl w-full mx-auto text-center p-6 text-xs text-[#002B2B]/60 font-mono">
+        IDEE-CLI &bull; OAuth 2.0 Device Authorization Protocol (RFC 8628)
+      </footer>
     </div>
   );
 }

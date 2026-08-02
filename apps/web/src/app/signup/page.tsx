@@ -9,13 +9,13 @@ export default function SignupPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [orgName, setOrgName] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Password Strength Calculation Algorithm
   const passwordStrength = useMemo(() => {
     if (!password) return { score: 0, label: '', color: '' };
 
@@ -109,8 +109,6 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F7F3] text-[#002B2B] flex flex-col font-sans selection:bg-[#88FF44] selection:text-[#002B2B] dot-grid-light">
-      
-      {/* Header Bar */}
       <header className="max-w-7xl w-full mx-auto flex items-center justify-between p-6">
         <Link href="/" className="flex items-center space-x-3">
           <LightbulbLogo size="sm" />
@@ -124,11 +122,8 @@ export default function SignupPage() {
         </div>
       </header>
 
-      {/* Centered Signup Card */}
       <main className="flex-1 flex items-center justify-center p-6 my-auto">
         <div className="w-full max-w-lg bg-white border-2 border-[#002B2B] rounded-2xl p-8 sm:p-10 stacked-card-shadow space-y-6">
-          
-          {/* Header */}
           <div className="flex flex-col items-center text-center space-y-3">
             <LightbulbLogo size="md" className="animate-lime-glow" />
             <h1 className="text-2xl font-extrabold text-[#002B2B] tracking-tight">
@@ -201,18 +196,27 @@ export default function SignupPage() {
                 <label className="block text-xs font-bold text-[#002B2B] font-mono">
                   [Password]
                 </label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full px-4 py-2.5 rounded-xl bg-[#F8F7F3] border border-[#002B2B]/20 text-xs text-[#002B2B] placeholder:text-[#002B2B]/40 focus:outline-none focus:border-[#002B2B] focus:ring-2 focus:ring-[#002B2B]/20"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full px-4 py-2.5 pr-10 rounded-xl bg-[#F8F7F3] border border-[#002B2B]/20 text-xs text-[#002B2B] placeholder:text-[#002B2B]/40 focus:outline-none focus:border-[#002B2B] focus:ring-2 focus:ring-[#002B2B]/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#002B2B]/60 hover:text-[#002B2B] text-xs font-mono font-bold"
+                    title={showPassword ? 'Hide Password' : 'Show Password'}
+                  >
+                    {showPassword ? '👁' : '👁'}
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Password Strength Meter Component */}
             {password && (
               <div className="space-y-1.5 p-3 rounded-xl bg-[#002B2B]/5 border border-[#002B2B]/10">
                 <div className="flex items-center justify-between text-[11px] font-mono">
@@ -234,7 +238,6 @@ export default function SignupPage() {
               </div>
             )}
 
-            {/* Terms and Transparency Disclosures - Same Tab Navigation */}
             <div className="flex items-start space-x-3 pt-1">
               <input
                 id="terms-checkbox"
@@ -265,7 +268,6 @@ export default function SignupPage() {
             </button>
           </form>
 
-          {/* Social OAuth */}
           <div className="relative flex items-center justify-center my-4">
             <div className="w-full border-t border-[#002B2B]/15" />
             <span className="absolute bg-white px-3 font-mono text-[10px] text-[#002B2B]/60 uppercase tracking-widest whitespace-nowrap">
@@ -292,7 +294,6 @@ export default function SignupPage() {
         </div>
       </main>
 
-      {/* Footer with Same Tab Transparency Links */}
       <footer className="max-w-7xl w-full mx-auto text-center p-6 text-xs text-[#002B2B]/60 font-mono space-y-2">
         <div>
           IDEE-CLI &bull; Declarative Dev Environment Engine &bull; All Rights Reserved
