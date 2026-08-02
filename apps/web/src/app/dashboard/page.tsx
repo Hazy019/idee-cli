@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { createPortal } from 'react-dom';
 
 interface TelemetryLog {
   id: string;
@@ -41,49 +41,22 @@ export default function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedLog, setSelectedLog] = useState<TelemetryLog | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
+  const [mounted, setMounted] = useState<boolean>(false);
 
   useEffect(() => {
+    setMounted(true);
     fetch('/api/telemetry-list')
       .then((res) => res.json())
       .then((data) => {
-        if (data.logs) setLogs(data.logs);
+        if (data.logs && Array.isArray(data.logs)) {
+          setLogs(data.logs);
+        } else {
+          setLogs([]);
+        }
       })
       .catch(() => {
-        setLogs([
-          {
-            id: 'log-101',
-            organization_id: 'org-1',
-            machine_hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-            source: 'interactive',
-            execution_time_ms: 1850,
-            packages_installed: ['Microsoft.VisualStudioCode', 'Git.Git'],
-            packages_skipped: ['Nodejs.Nodejs', 'Python.Python.3.11'],
-            packages_failed: [],
-            override_packages: ['Neovim.Neovim'],
-            timestamp: new Date().toISOString(),
-          },
-          {
-            id: 'log-102',
-            organization_id: 'org-1',
-            machine_hash: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
-            source: 'ci',
-            execution_time_ms: 3400,
-            packages_installed: ['Git.Git', 'Nodejs.Nodejs', 'Docker.DockerDesktop'],
-            packages_skipped: [],
-            packages_failed: [{ id: 'Docker.DockerDesktop', reason: 'Download timeout' }],
-            override_packages: [],
-            timestamp: new Date(Date.now() - 3600000).toISOString(),
-          },
-        ]);
+        setLogs([]);
       });
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSelectedLog(null);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const filteredLogs = logs.filter((log) => {
@@ -108,7 +81,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-10 selection:bg-[#88FF44] selection:text-[#002B2B]">
       
-      {/* Top Header Row with Title & Avatar Callout */}
+      {/* Top Header Row with Title & Active Workstations Callout */}
       <div className="flex flex-col md:flex-row md:items-center justify-between border-b-2 border-[#002B2B] pb-6 gap-4">
         <div>
           <div className="text-xs font-mono font-bold text-[#002B2B]/60 uppercase tracking-widest">[CONTROL PANEL]</div>
@@ -121,21 +94,9 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center space-x-3 bg-white p-3 rounded-2xl border-2 border-[#002B2B] stacked-card-shadow">
-          <div className="text-xs font-mono font-bold text-[#002B2B]">[Active Team]</div>
-          <div className="flex items-center -space-x-1.5">
-            {['JD', 'AK', 'MR', 'SL'].map((initials, idx) => (
-              <div
-                key={initials}
-                className={`w-7 h-7 rounded-full border border-[#002B2B] flex items-center justify-center text-[10px] font-mono font-bold text-white ${
-                  idx % 2 === 0 ? 'bg-[#002B2B]' : 'bg-[#053838]'
-                }`}
-              >
-                {initials}
-              </div>
-            ))}
-          </div>
+          <div className="text-xs font-mono font-bold text-[#002B2B]">[Active Telemetry Stream]</div>
           <span className="text-xs font-mono font-bold text-[#002B2B] bg-[#88FF44] px-2 py-0.5 rounded border border-[#002B2B]">
-            [100% ONLINE]
+            {logs.length > 0 ? `[${logs.length} RUNS INGESTED]` : '[READY FOR RUNS]'}
           </span>
         </div>
       </div>
@@ -145,14 +106,14 @@ export default function DashboardPage() {
         <div className="p-5 rounded-2xl bg-white border-2 border-[#002B2B] stacked-card-shadow">
           <div className="text-xs font-mono font-bold text-[#002B2B]/60 uppercase">[HOST MACHINES]</div>
           <div className="text-3xl font-black text-[#002B2B] mt-2">{totalMachines}</div>
-          <div className="text-[11px] text-[#002B2B]/70 mt-1">Authenticated GUID Hashes</div>
+          <div className="text-[11px] text-[#002B2B]/70 mt-1">Authenticated Machine GUID Hashes</div>
         </div>
 
         <div className="p-5 rounded-2xl bg-white border-2 border-[#002B2B] stacked-card-shadow">
           <div className="text-xs font-mono font-bold text-[#002B2B]/60 uppercase">[PARITY RATE]</div>
           <div className="text-3xl font-black text-[#002B2B] mt-2">{parityRate}%</div>
           <div className="text-[11px] font-bold text-[#002B2B] mt-1 bg-[#88FF44] inline-block px-2 py-0.5 rounded border border-[#002B2B]">
-            Target Baseline Met
+            Target Baseline Compliance
           </div>
         </div>
 
@@ -171,235 +132,215 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Central Terminal Console Widget matching image_29.png */}
-      <div className="rounded-2xl bg-[#002B2B] text-white p-6 border-2 border-[#002B2B] shadow-2xl corner-brackets">
+      {/* Central Terminal Console Widget */}
+      <div className="rounded-2xl bg-[#002B2B] text-white p-6 border-2 border-[#002B2B] shadow-2xl corner-brackets relative">
         <CornerBracketDecoration />
 
-        <div className="flex items-center justify-between border-b border-[#002B2B]-light pb-4 mb-4">
+        <div className="flex items-center justify-between border-b border-[#002B2B]/40 pb-4 mb-4">
           <div className="flex items-center space-x-3">
             <span className="w-3.5 h-3.5 rounded-full bg-[#EF4444]" />
             <span className="w-3.5 h-3.5 rounded-full bg-[#F59E0B]" />
-            <span className="w-3.5 h-3.5 rounded-full bg-[#88FF44]" />
-            <span className="font-mono text-xs text-[#88FF44] font-bold">[LIVE TELEMETRY FEED]</span>
+            <span className="w-3.5 h-3.5 rounded-full bg-[#10B981]" />
+            <span className="font-mono text-xs text-[#88FF44] font-bold ml-2">[LIVE TELEMETRY FEED]</span>
           </div>
-
-          <div className="text-xs font-mono text-white/60">
-            [MODE: RECONCILIATION ENGINE ACTIVE]
-          </div>
+          <div className="font-mono text-[11px] text-white/50">[MODE: RECONCILIATION ENGINE ACTIVE]</div>
         </div>
 
-        <div className="font-mono text-xs leading-relaxed space-y-2 bg-[#051D1D] p-5 rounded-xl border border-[#88FF44]/20 text-[#F8F7F3] overflow-x-auto min-h-[160px]">
-          <div className="text-white/50">$ idee telemetry --listen --org-id=00000000-0000-0000-0000-000000000001</div>
-          <div className="text-[#88FF44]">✔ [SYSTEM OK] Kahn DAG builder initialized. No circular dependencies found.</div>
-          <div className="text-white/80">&gt; Machine e3b0c442... reported 100% parity baseline compliance.</div>
-          <div className="text-white/80">&gt; Telemetry event logged to append-only RLS security table.</div>
-          <div className="text-[#88FF44] font-bold">&gt; Reconciliation loop complete (1.85s). Machine in 100% Parity.</div>
-          <span className="inline-block w-2.5 h-4 bg-[#88FF44] animate-blink align-middle ml-1" />
-        </div>
-      </div>
-
-      {/* Workflow Step Panel (4-Step Process) matching image_29.png */}
-      <div className="space-y-4">
-        <div className="text-xs font-mono font-bold text-[#002B2B]/60 uppercase tracking-widest">[WORKFLOW TASKS]</div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { step: '01', status: '[Dortore]', title: 'Declare Baseline', desc: 'Lock package versions in team-setup.json' },
-            { step: '02', status: '[Listi]', title: 'Audit State', desc: 'Scan local winget packages & build DAG' },
-            { step: '03', status: '[Axure]', title: 'Apply Orders', desc: 'Execute unattended winget install queue' },
-            { step: '04', status: '[Parity]', title: 'Verify Parity', desc: 'Stream telemetry logs to org dashboard' },
-          ].map(({ step, status, title, desc }) => (
-            <div key={step} className="p-4 rounded-xl bg-white border-2 border-[#002B2B] stacked-card-shadow space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs font-bold bg-[#002B2B] text-[#88FF44] px-2 py-0.5 rounded">
-                  {step}
-                </span>
-                <span className="font-mono text-xs font-bold text-[#002B2B]">{status}</span>
-              </div>
-              <h3 className="font-bold text-sm text-[#002B2B]">{title}</h3>
-              <p className="text-xs text-[#002B2B]/70">{desc}</p>
+        <div className="font-mono text-xs space-y-2 text-white/80 leading-relaxed overflow-x-auto p-2">
+          <div className="text-white/40">$ idee telemetry --listen --org-id=00000000-0000-0000-0000-000000000001</div>
+          {logs.length > 0 ? (
+            <div className="text-[#88FF44] font-bold">
+              ✔ [{logs.length} Telemetry Payload Events Ingested] Ready for live updates.
             </div>
-          ))}
+          ) : (
+            <div className="text-amber-400">
+              ⚡ Waiting for workstation telemetry... Run `idee apply --config team-setup.json` in CLI.
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Parity Grid Data Table Controls */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-white border-2 border-[#002B2B] stacked-card-shadow">
-        <div className="flex items-center space-x-4 w-full sm:w-auto">
-          <input
-            type="text"
-            placeholder="Search machine GUID hash..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full sm:w-80 px-4 py-2 text-xs bg-[#F8F7F3] border border-[#002B2B]/30 rounded-xl text-[#002B2B] font-mono focus:outline-none focus:border-[#002B2B]"
-          />
-
-          <label className="flex items-center space-x-2 text-xs font-bold text-[#002B2B] cursor-pointer select-none">
+      {/* Interactive Telemetry Table Container */}
+      <div className="rounded-2xl bg-white border-2 border-[#002B2B] stacked-card-shadow overflow-hidden space-y-4 p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center space-x-3 flex-1 max-w-md">
             <input
-              type="checkbox"
-              checked={showCiRuns}
-              onChange={(e) => setShowCiRuns(e.target.checked)}
-              className="rounded bg-[#F8F7F3] border-[#002B2B] text-[#002B2B] focus:ring-[#002B2B]"
+              type="text"
+              placeholder="Search machine GUID hash..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-2 rounded-xl bg-[#F8F7F3] border border-[#002B2B]/20 text-xs font-mono text-[#002B2B] placeholder:text-[#002B2B]/40 focus:outline-none focus:border-[#002B2B]"
             />
-            <span>Show CI runs</span>
-          </label>
+          </div>
+
+          <div className="flex items-center space-x-4 text-xs font-mono">
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showCiRuns}
+                onChange={(e) => setShowCiRuns(e.target.checked)}
+                className="rounded border-[#002B2B] text-[#002B2B] focus:ring-[#88FF44]"
+              />
+              <span className="text-[#002B2B]/80 font-bold">Show CI runs</span>
+            </label>
+
+            <div className="hidden lg:flex items-center space-x-2 text-[11px] text-[#002B2B]/60">
+              <span>Legend:</span>
+              <span className="px-1.5 py-0.5 rounded bg-[#88FF44] text-[#002B2B] font-bold border border-[#002B2B]">
+                [✔ Parity]
+              </span>
+              <span className="px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 font-bold border border-amber-800">
+                [⚠ Drift]
+              </span>
+              <span className="px-1.5 py-0.5 rounded bg-red-200 text-red-900 font-bold border border-red-800">
+                [✖ Fail]
+              </span>
+            </div>
+          </div>
         </div>
 
-        <div className="text-xs font-mono text-[#002B2B]/70">
-          Legend: <span className="font-bold text-[#002B2B] bg-[#88FF44] px-1 rounded">[✔ Parity]</span> &bull; <span className="font-bold text-[#002B2B] bg-amber-200 px-1 rounded">[○ Drift]</span> &bull; <span className="font-bold text-[#002B2B] bg-red-200 px-1 rounded">[✖ Fail]</span>
-        </div>
-      </div>
-
-      {/* Confined Scroll Container for Data Table (h-[600px] overflow-y-auto) */}
-      <div className="h-[600px] overflow-y-auto rounded-2xl bg-white border-2 border-[#002B2B] stacked-card-shadow">
         {filteredLogs.length === 0 ? (
-          <div className="p-12 text-center space-y-4">
-            <div className="w-12 h-12 rounded-xl bg-[#002B2B] text-[#88FF44] flex items-center justify-center font-mono font-bold text-xl mx-auto">
-              0
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-[#002B2B]">[No Host Machines Found]</h3>
-              <p className="text-xs text-[#002B2B]/70 mt-1">
-                Run `idee apply` from your developer workstation terminal to report telemetry.
-              </p>
-            </div>
-            <div className="max-w-md mx-auto p-4 rounded-xl bg-[#002B2B] text-white font-mono text-xs text-left space-y-1">
-              <div className="text-white/50"># Authenticate and reconcile local machine</div>
-              <div className="text-[#88FF44]">idee login</div>
-              <div className="text-[#88FF44]">idee apply</div>
+          <div className="p-12 text-center space-y-3 font-mono border-2 border-dashed border-[#002B2B]/20 rounded-xl">
+            <div className="text-sm font-bold text-[#002B2B]">No Workstation Telemetry Logs Received</div>
+            <div className="text-xs text-[#002B2B]/60 max-w-md mx-auto leading-relaxed">
+              Run your first reconciliation in terminal:
+              <br />
+              <code className="text-[#002B2B] font-bold bg-[#88FF44] px-2 py-0.5 rounded mt-1 inline-block border border-[#002B2B]">
+                idee apply --config team-setup.json
+              </code>
             </div>
           </div>
         ) : (
-          <table className="w-full text-left text-xs">
-            <thead className="sticky top-0 bg-[#002B2B] text-white font-mono uppercase tracking-wider border-b-2 border-[#002B2B] z-10">
-              <tr>
-                <th className="p-4 min-w-[220px]">Machine GUID Hash</th>
-                <th className="p-4 w-24">Type</th>
-                {REQUIRED_BASELINE_PACKAGES.map((pkg) => (
-                  <th key={pkg} className="p-4 text-center min-w-[130px] font-mono">
-                    {pkg.split('.').pop()}
-                  </th>
-                ))}
-                <th className="p-4 text-right w-28">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#002B2B]/10 font-sans">
-              {filteredLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-[#F8F7F3] transition-colors">
-                  <td className="p-4 font-mono font-bold text-[#002B2B]">
-                    <div className="flex items-center space-x-2">
-                      {log.source === 'ci' && <span title="CI Bot">🤖</span>}
-                      <span>{log.machine_hash.slice(0, 16)}...</span>
-                    </div>
-                  </td>
-
-                  <td className="p-4">
-                    <span className="px-2 py-0.5 rounded font-mono text-[10px] font-bold uppercase bg-[#002B2B]/10 text-[#002B2B]">
-                      {log.source}
-                    </span>
-                  </td>
-
-                  {REQUIRED_BASELINE_PACKAGES.map((pkgId) => {
-                    const isInstalled = log.packages_installed.includes(pkgId) || log.packages_skipped.includes(pkgId);
-                    const isFailed = log.packages_failed.some((f) => f.id === pkgId);
-                    const isOverride = log.override_packages.includes(pkgId);
-
-                    return (
-                      <td key={pkgId} className="p-4 text-center font-mono font-bold">
-                        {isFailed ? (
-                          <span className="bg-red-200 text-red-900 px-2 py-0.5 rounded">[✖ Fail]</span>
-                        ) : isInstalled ? (
-                          <span className="bg-[#88FF44] text-[#002B2B] px-2 py-0.5 rounded border border-[#002B2B]">[✔ Parity]</span>
-                        ) : isOverride ? (
-                          <span className="bg-amber-200 text-amber-900 px-2 py-0.5 rounded">[★ Override]</span>
-                        ) : (
-                          <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded">[○ Drift]</span>
-                        )}
-                      </td>
-                    );
-                  })}
-
-                  <td className="p-4 text-right">
-                    <button
-                      onClick={() => setSelectedLog(log)}
-                      className="px-3 py-1 text-xs font-bold rounded-lg bg-[#88FF44] text-[#002B2B] border border-[#002B2B] hover:bg-[#77EE33] transition-colors"
-                    >
-                      Inspect &rarr;
-                    </button>
-                  </td>
+          <div className="overflow-x-auto border-2 border-[#002B2B] rounded-xl">
+            <table className="w-full text-left text-xs font-mono">
+              <thead className="bg-[#002B2B] text-white uppercase tracking-wider">
+                <tr>
+                  <th className="p-3.5">Machine GUID Hash</th>
+                  <th className="p-3.5">Type</th>
+                  {REQUIRED_BASELINE_PACKAGES.map((pkg) => (
+                    <th key={pkg} className="p-3.5 text-center">
+                      {pkg.split('.')[pkg.split('.').length - 1].toUpperCase()}
+                    </th>
+                  ))}
+                  <th className="p-3.5 text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[#002B2B]/10 bg-white">
+                {filteredLogs.map((log) => {
+                  const hasFailed = log.packages_failed.length > 0;
+                  return (
+                    <tr key={log.id} className="hover:bg-[#F8F7F3] transition-colors">
+                      <td className="p-3.5 font-bold text-[#002B2B]">
+                        {log.machine_hash.substring(0, 16)}...
+                      </td>
+                      <td className="p-3.5">
+                        <span className="px-2 py-0.5 rounded bg-[#002B2B]/5 text-[#002B2B] text-[10px] font-bold border border-[#002B2B]/20 uppercase">
+                          {log.source}
+                        </span>
+                      </td>
+
+                      {REQUIRED_BASELINE_PACKAGES.map((pkg) => {
+                        const isInstalled =
+                          log.packages_installed.includes(pkg) || log.packages_skipped.includes(pkg);
+                        const isFailed = log.packages_failed.some((f) => f.id === pkg);
+
+                        return (
+                          <td key={pkg} className="p-3.5 text-center">
+                            {isFailed ? (
+                              <span className="px-2 py-1 rounded bg-red-200 text-red-900 font-bold border border-red-800 text-[10px]">
+                                [✖ Fail]
+                              </span>
+                            ) : isInstalled ? (
+                              <span className="px-2 py-1 rounded bg-[#88FF44] text-[#002B2B] font-bold border border-[#002B2B] text-[10px]">
+                                [✔ Parity]
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 rounded bg-amber-100 text-amber-900 font-bold border border-amber-700 text-[10px]">
+                                [⚠ Drift]
+                              </span>
+                            )}
+                          </td>
+                        );
+                      })}
+
+                      <td className="p-3.5 text-right">
+                        <button
+                          onClick={() => setSelectedLog(log)}
+                          className="px-3 py-1 rounded-lg bg-[#88FF44] text-[#002B2B] font-bold border border-[#002B2B] hover:bg-[#77EE33] transition-colors"
+                        >
+                          Inspect &rarr;
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
-      {/* Benefit Panel Breakdown (3x2 Grid) matching image_29.png */}
-      <div className="space-y-4 pt-4">
-        <div className="text-xs font-mono font-bold text-[#002B2B]/60 uppercase tracking-widest">[TEAM ACTIVITIES & METRICS]</div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            { title: '[Ratere tappoling cult metrics]', value: '99.4%', label: 'DAG Resolution Accuracy' },
-            { title: '[Uppervoxng memory stats]', value: '1850ms', label: 'Average Execution Speed' },
-            { title: '[Hardware Binding Security]', value: 'SHA-256', label: 'Machine GUID Claim' },
-          ].map(({ title, value, label }) => (
-            <div key={title} className="p-6 rounded-2xl bg-white border-2 border-[#002B2B] stacked-card-shadow space-y-2">
-              <div className="text-xs font-mono font-bold text-[#002B2B]/60">{title}</div>
-              <div className="text-2xl font-black text-[#002B2B]">{value}</div>
-              <div className="text-xs text-[#002B2B]/70">{label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Slide-over Detail Inspection Modal */}
-      {selectedLog && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-[#002B2B]/50 backdrop-blur-sm">
-          <div className="w-full max-w-xl bg-white border-l-2 border-[#002B2B] h-full flex flex-col p-6 space-y-6 overflow-y-auto">
+      {/* Slide-over Detail Inspection Modal Portal (Mounted to document.body) */}
+      {mounted && selectedLog && createPortal(
+        <div className="fixed inset-0 z-[100] flex justify-end bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-xl bg-white border-l-4 border-[#002B2B] h-full flex flex-col p-6 space-y-6 overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between border-b-2 border-[#002B2B] pb-4">
               <div>
                 <h2 className="text-xl font-extrabold text-[#002B2B]">[Telemetry Details]</h2>
-                <p className="text-xs font-mono text-[#002B2B]/70 mt-1">{selectedLog.machine_hash}</p>
+                <p className="text-xs font-mono text-[#002B2B]/70 mt-1 select-all">{selectedLog.machine_hash}</p>
               </div>
               <button
                 onClick={() => setSelectedLog(null)}
-                className="px-3 py-1.5 rounded-lg bg-[#002B2B] text-white font-mono text-xs font-bold"
+                className="px-3 py-1.5 rounded-xl bg-[#002B2B] text-[#88FF44] font-mono text-xs font-bold border border-[#002B2B] hover:bg-[#002B2B]/90"
               >
                 ✕ Esc
               </button>
             </div>
 
             <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="p-3 rounded-xl bg-[#F8F7F3] border border-[#002B2B]/20">
-                <div className="text-[10px] font-mono uppercase text-[#002B2B]/60">Installed</div>
-                <div className="text-lg font-black text-[#002B2B]">{selectedLog.packages_installed.length}</div>
+              <div className="p-3.5 rounded-xl bg-[#F8F7F3] border-2 border-[#002B2B]">
+                <div className="text-[10px] font-mono uppercase text-[#002B2B]/60 font-bold">Installed</div>
+                <div className="text-xl font-black text-[#002B2B]">{selectedLog.packages_installed.length}</div>
               </div>
-              <div className="p-3 rounded-xl bg-[#F8F7F3] border border-[#002B2B]/20">
-                <div className="text-[10px] font-mono uppercase text-[#002B2B]/60">Skipped</div>
-                <div className="text-lg font-black text-[#002B2B]">{selectedLog.packages_skipped.length}</div>
+              <div className="p-3.5 rounded-xl bg-[#F8F7F3] border-2 border-[#002B2B]">
+                <div className="text-[10px] font-mono uppercase text-[#002B2B]/60 font-bold">Skipped</div>
+                <div className="text-xl font-black text-[#002B2B]">{selectedLog.packages_skipped.length}</div>
               </div>
-              <div className="p-3 rounded-xl bg-[#F8F7F3] border border-[#002B2B]/20">
-                <div className="text-[10px] font-mono uppercase text-[#002B2B]/60">Failed</div>
-                <div className="text-lg font-black text-red-600">{selectedLog.packages_failed.length}</div>
+              <div className="p-3.5 rounded-xl bg-[#F8F7F3] border-2 border-[#002B2B]">
+                <div className="text-[10px] font-mono uppercase text-[#002B2B]/60 font-bold">Failed</div>
+                <div className="text-xl font-black text-red-600">{selectedLog.packages_failed.length}</div>
               </div>
             </div>
+
+            {selectedLog.packages_failed.length > 0 && (
+              <div className="p-4 rounded-xl bg-red-500/10 border-2 border-red-600 text-xs font-mono space-y-2">
+                <div className="font-bold text-red-700 uppercase">[Failed Packages & Errors]</div>
+                {selectedLog.packages_failed.map((f) => (
+                  <div key={f.id} className="text-red-800 bg-white p-2 rounded border border-red-400">
+                    <span className="font-bold">{f.id}:</span> {f.reason}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="flex-1 flex flex-col space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-[#002B2B] font-mono">[JSON Telemetry Payload]</span>
                 <button
                   onClick={() => copyTelemetryLog(selectedLog)}
-                  className="px-3 py-1 text-xs font-bold rounded-lg bg-[#88FF44] text-[#002B2B] border border-[#002B2B]"
+                  className="px-3 py-1 text-xs font-mono font-bold rounded-xl bg-[#88FF44] text-[#002B2B] border-2 border-[#002B2B] shadow-[2px_2px_0px_#002B2B]"
                 >
-                  {copied ? 'Copied!' : 'Copy Telemetry JSON'}
+                  {copied ? '✔ Copied!' : 'Copy Telemetry JSON'}
                 </button>
               </div>
 
-              <pre className="flex-1 p-4 rounded-xl bg-[#002B2B] text-[#88FF44] text-xs font-mono overflow-x-auto select-all leading-relaxed">
+              <pre className="flex-1 p-4 rounded-xl bg-[#002B2B] text-[#88FF44] text-xs font-mono overflow-x-auto select-all leading-relaxed border-2 border-[#002B2B]">
                 {JSON.stringify(selectedLog, null, 2)}
               </pre>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

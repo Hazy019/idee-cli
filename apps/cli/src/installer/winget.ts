@@ -117,13 +117,15 @@ export class WingetBackend implements InstallerBackend {
       const stderr = err.stderr ? err.stderr.toString() : err.message || '';
       const errorReason = this.mapExitCodeToReason(exitCode, stderr);
 
+      const isAlreadyInstalled = errorReason === 'Package is already installed';
+
       return {
         packageId: id,
-        success: false,
+        success: isAlreadyInstalled,
         exitCode,
         stdout,
         stderr,
-        errorReason,
+        errorReason: isAlreadyInstalled ? undefined : errorReason,
       };
     }
   }
@@ -140,8 +142,10 @@ export class WingetBackend implements InstallerBackend {
 
     if (
       hexCode.endsWith('000b') ||
+      hexCode.endsWith('0014') ||
       uExitCode === 2156396555 ||
       uExitCode === 2316632075 ||
+      uExitCode === 2316632084 ||
       exitCode === -1978335189 ||
       exitCode === -1978335221 ||
       exitCode === -2138570741

@@ -3,18 +3,55 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { LightbulbLogo } from '@/components/LightbulbLogo';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage('');
     setLoggingIn(true);
-    setTimeout(() => {
+
+    try {
+      if (isSupabaseConfigured && supabase) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: username,
+          password,
+        });
+
+        if (error) throw error;
+
+        document.cookie = 'idee-session=active-session; path=/; max-age=86400';
+        window.location.href = '/dashboard';
+      } else {
+        document.cookie = 'idee-session=active-session; path=/; max-age=86400';
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 600);
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Invalid email or password.');
+      setLoggingIn(false);
+    }
+  };
+
+  const handleOAuth = async (provider: 'github' | 'google') => {
+    document.cookie = 'idee-session=active-session; path=/; max-age=86400';
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/api/auth/callback?next=/dashboard`,
+        },
+      });
+      if (error) setErrorMessage(error.message);
+    } else {
       window.location.href = '/dashboard';
-    }, 800);
+    }
   };
 
   return (
@@ -49,6 +86,12 @@ export default function LoginPage() {
             </p>
           </div>
 
+          {errorMessage && (
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs font-mono text-red-700">
+              ✖ {errorMessage}
+            </div>
+          )}
+
           {/* Form Fields */}
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1.5">
@@ -70,9 +113,9 @@ export default function LoginPage() {
                 <label className="block text-xs font-bold text-[#002B2B] font-mono">
                   [Password]
                 </label>
-                <a href="#" className="text-[11px] text-[#002B2B]/60 hover:text-[#002B2B]">
+                <Link href="/forgot-password" className="text-[11px] text-[#002B2B]/70 hover:text-[#002B2B] underline font-medium">
                   Forgot?
-                </a>
+                </Link>
               </div>
               <input
                 type="password"
@@ -99,7 +142,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Social OAuth - Cleanly Centered Divider Line */}
+          {/* Social OAuth */}
           <div className="relative flex items-center justify-center my-6">
             <div className="w-full border-t border-[#002B2B]/15" />
             <span className="absolute bg-white px-3 font-mono text-[10px] text-[#002B2B]/60 uppercase tracking-widest whitespace-nowrap">
@@ -110,14 +153,14 @@ export default function LoginPage() {
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={() => handleLogin({ preventDefault: () => {} } as any)}
+              onClick={() => handleOAuth('github')}
               className="py-2.5 px-3 rounded-xl bg-[#F8F7F3] border border-[#002B2B]/20 text-xs font-bold text-[#002B2B] hover:border-[#002B2B] flex items-center justify-center space-x-2 transition-colors"
             >
               <span>GitHub</span>
             </button>
             <button
               type="button"
-              onClick={() => handleLogin({ preventDefault: () => {} } as any)}
+              onClick={() => handleOAuth('google')}
               className="py-2.5 px-3 rounded-xl bg-[#F8F7F3] border border-[#002B2B]/20 text-xs font-bold text-[#002B2B] hover:border-[#002B2B] flex items-center justify-center space-x-2 transition-colors"
             >
               <span>Google</span>
@@ -133,9 +176,18 @@ export default function LoginPage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="max-w-7xl w-full mx-auto text-center p-6 text-xs text-[#002B2B]/40 font-mono">
-        IDEE-CLI &bull; Declarative Dev Environment Engine &bull; All Rights Reserved
+      {/* Footer with Same Tab Transparency Links */}
+      <footer className="max-w-7xl w-full mx-auto text-center p-6 text-xs text-[#002B2B]/60 font-mono space-y-2">
+        <div>
+          IDEE-CLI &bull; Declarative Dev Environment Engine &bull; All Rights Reserved
+        </div>
+        <div className="flex justify-center space-x-4">
+          <Link href="/terms?from=login" className="hover:underline font-semibold">Terms of Service</Link>
+          <span>&bull;</span>
+          <Link href="/privacy-policy?from=login" className="hover:underline font-semibold">Privacy Policy</Link>
+          <span>&bull;</span>
+          <Link href="/security?from=login" className="hover:underline font-semibold">Security Policy</Link>
+        </div>
       </footer>
     </div>
   );

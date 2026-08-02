@@ -1,15 +1,15 @@
 import React from 'react';
+import { LightbulbLogo } from '@/components/LightbulbLogo';
 
 export default function Loading() {
   return (
-    <div className="space-y-6 animate-pulse motion-reduce:animate-none">
-      <div className="h-8 w-64 bg-zinc-800 rounded-lg"></div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-28 bg-zinc-900 border border-zinc-800 rounded-xl"></div>
-        ))}
+    <div className="min-h-screen bg-[#F8F7F3] flex items-center justify-center p-6 dot-grid-light">
+      <div className="flex flex-col items-center space-y-4 animate-fade-in">
+        <LightbulbLogo size="lg" className="animate-pulse" />
+        <div className="font-mono text-xs font-bold text-[#002B2B] tracking-widest uppercase">
+          [Synchronizing Environment State...]
+        </div>
       </div>
-      <div className="h-64 bg-zinc-900 border border-zinc-800 rounded-xl"></div>
     </div>
   );
 }

@@ -4,11 +4,13 @@ import type { NextRequest } from 'next/server';
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Gated dashboard routes requiring mandatory JWT session
+  // Gated dashboard routes requiring mandatory session
   const isGatedRoute =
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/service-tokens') ||
     pathname.startsWith('/runs');
+
+  let res = NextResponse.next();
 
   if (isGatedRoute) {
     const sessionToken =
@@ -20,13 +22,20 @@ export function middleware(req: NextRequest) {
     if (!sessionToken) {
       const loginUrl = new URL('/login', req.url);
       loginUrl.searchParams.set('redirectTo', pathname);
-      return NextResponse.redirect(loginUrl);
+      res = NextResponse.redirect(loginUrl);
     }
   }
 
-  return NextResponse.next();
+  // Security Headers Enforcement (§12.2 Hardening)
+  res.headers.set('X-Frame-Options', 'DENY');
+  res.headers.set('X-Content-Type-Options', 'nosniff');
+  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.headers.set('X-XSS-Protection', '1; mode=block');
+
+  return res;
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/service-tokens/:path*', '/runs/:path*'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

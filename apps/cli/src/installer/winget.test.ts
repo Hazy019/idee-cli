@@ -14,7 +14,8 @@ test('WingetBackend - map exit code to reason', () => {
   const fn = (backend as any).mapExitCodeToReason.bind(backend);
 
   assert.equal(fn(0, ''), 'Success');
-  assert.equal(fn(-1978335189, ''), 'Package is already installed'); // 0x8088000B
-  assert.equal(fn(-1978335188, ''), 'Package not found in sources'); // 0x8088000C
-  assert.equal(fn(-1978335212, ''), 'Source agreement required'); // 0x80880004
+  assert.equal(fn(-1978335189, ''), 'Package is already installed'); // 0x8920000B
+  assert.equal(fn(-1978335188, ''), 'Package not found in sources'); // 0x8920000C
+  assert.equal(fn(-1978335212, ''), 'Package is already installed'); // 0x89200014
+  assert.equal(fn(-1978335228, ''), 'Source agreement required'); // 0x89200004
 });
