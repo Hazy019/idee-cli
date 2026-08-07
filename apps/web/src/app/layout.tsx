@@ -14,7 +14,9 @@ export const metadata: Metadata = {
   publisher: 'IDEE-CLI Architecture Team',
   keywords: [
     'IDEE-CLI',
+    'idee-cli',
     'Kyrell Santillan',
+    'kyrell santillan',
     'Hazy',
     'Windows Dev Environment Engine',
     'Idempotent Reconciliation',
@@ -35,7 +37,7 @@ export const metadata: Metadata = {
     google: 'jurX14tSOTCPj1zMR21guSGjlv22Q17yRsd9fNjop5g',
   },
   openGraph: {
-    title: 'IDEE-CLI — Idempotent Dev Environment Engine | Kyrell Santillan & Hazy',
+    title: 'IDEE-CLI',
     description:
       'Windows-native developer environment reconciliation engine. Designed and architected by Kyrell Santillan and Hazy.',
     type: 'website',
@@ -52,7 +54,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'IDEE-CLI — Idempotent Dev Environment Engine | Kyrell Santillan & Hazy',
+    title: 'IDEE-CLI',
     description:
       'Declarative Windows dev environment parity engine by Kyrell Santillan & Hazy.',
     creator: '@KyrellSantillan',
