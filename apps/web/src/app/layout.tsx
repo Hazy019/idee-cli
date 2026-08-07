@@ -25,9 +25,14 @@ export const metadata: Metadata = {
     'Telemetry Parity Grid',
   ],
   icons: {
-    icon: '/Logo.png',
-    shortcut: '/Logo.png',
-    apple: '/Logo.png',
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon.png', type: 'image/png', sizes: '192x192' },
+    ],
+    apple: '/apple-icon.png',
+  },
+  verification: {
+    google: 'jurX14tSOTCPj1zMR21guSGjlv22Q17yRsd9fNjop5g',
   },
   openGraph: {
     title: 'IDEE-CLI — Idempotent Dev Environment Engine | Kyrell Santillan & Hazy',
@@ -36,6 +41,14 @@ export const metadata: Metadata = {
     type: 'website',
     siteName: 'IDEE-CLI',
     locale: 'en_US',
+    images: [
+      {
+        url: '/Logo.png',
+        width: 1200,
+        height: 630,
+        alt: 'IDEE-CLI Preview',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
@@ -79,6 +92,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/icon.png" />
+        <link rel="apple-touch-icon" href="/apple-icon.png" />
+        <meta name="google-site-verification" content="jurX14tSOTCPj1zMR21guSGjlv22Q17yRsd9fNjop5g" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdData) }}
