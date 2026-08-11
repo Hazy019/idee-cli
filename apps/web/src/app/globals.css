@@ -7,10 +7,9 @@
   --color-bg: #F8F7F3;
   --color-surface: #FFFFFF;
   --color-surface-subtle: #F1EFF8;
-  --color-[#002B2B]: #002B2B;
   --color-teal-dark: #002B2B;
-  --color-[#002B2B]-light: #053838;
-  --color-[#88FF44]: #88FF44;
+  --color-teal-light: #053838;
+  --color-lime: #88FF44;
   --color-lime-glow: rgba(136, 255, 68, 0.4);
   --color-border: #E2E0D8;
   --color-border-dark: #002B2B;
