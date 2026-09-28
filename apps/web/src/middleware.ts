@@ -25,7 +25,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 // ── Rate-limiting state (per-lambda, resets on cold starts) ───────────────────
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_WINDOW_MS = 30_000; // 30 s
-const MAX_AUTH_REQUESTS_PER_WINDOW = 10;
+const MAX_AUTH_REQUESTS_PER_WINDOW = 30;
 
 // ── Supabase config ───────────────────────────────────────────────────────────
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -73,8 +73,8 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? '127.0.0.1';
 
-  // ── 1. Rate limiting ────────────────────────────────────────────────────────
-  if (isAuthFormRoute(pathname)) {
+  // ── 1. Rate limiting (Only rate-limit POST credential submissions, not GET page views)
+  if (isAuthFormRoute(pathname) && req.method === 'POST') {
     const now = Date.now();
     const rateData = rateLimitMap.get(ip) ?? { count: 0, resetTime: now + RATE_LIMIT_WINDOW_MS };
 
