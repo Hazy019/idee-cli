@@ -3,6 +3,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://idee-cli.vercel.app'),
   title: 'IDEE-CLI',
   description:
     'Windows-native developer environment reconciliation engine architected by Kyrell Santillan and Hazy. Declare your baseline, run one command, achieve 100% machine parity across your entire engineering org.',

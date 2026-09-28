@@ -26,6 +26,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized: missing bearer token' }, { status: 401 });
     }
 
+    // Validate token format against recognized schemes (dev token, service token, or JWT)
+    const isValidDevToken = token.startsWith('dev-token-');
+    const isValidServiceToken = token.startsWith('st_');
+    const isValidJwt = token.split('.').length === 3;
+    const isMockLocalToken = process.env.NODE_ENV !== 'production' && token === 'local-dev-token';
+
+    if (!isValidDevToken && !isValidServiceToken && !isValidJwt && !isMockLocalToken) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Unrecognized or invalid bearer token format.' },
+        { status: 401 }
+      );
+    }
+
     // Rate limiting (60 requests per minute limit per token)
     const rateLimit = await checkRateLimit(token || 'anonymous', 60, 60000);
     if (!rateLimit.success) {

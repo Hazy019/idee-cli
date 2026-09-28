@@ -3,7 +3,24 @@ import { globalStore } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+function isAuthenticated(req: NextRequest): boolean {
+  const hasSbCookie = req.cookies.getAll().some((c) => c.name.startsWith('sb-'));
+  const sessionToken =
+    req.cookies.get('sb-access-token')?.value ||
+    req.cookies.get('idee-session')?.value ||
+    (hasSbCookie ? 'supabase-auth-cookie' : null) ||
+    req.headers.get('authorization');
+  return Boolean(sessionToken);
+}
+
+export async function GET(req: NextRequest) {
+  if (!isAuthenticated(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized', message: 'You must be authenticated to view service accounts.' },
+      { status: 401 }
+    );
+  }
+
   const accounts = globalStore.getServiceAccounts().map((acc) => {
     const expiresAt = new Date(acc.expires_at).getTime();
     const now = Date.now();
@@ -16,8 +33,15 @@ export async function GET() {
       status = 'warning';
     }
 
+    // Mask token hash to prevent secret exfiltration
+    const maskedHash =
+      acc.token_hash && acc.token_hash.length > 8
+        ? `${acc.token_hash.slice(0, 6)}...••••`
+        : '••••••••••••';
+
     return {
       ...acc,
+      token_hash: maskedHash,
       status,
       daysUntilExpiry,
     };
@@ -27,6 +51,13 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  if (!isAuthenticated(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized', message: 'You must be authenticated to manage service accounts.' },
+      { status: 401 }
+    );
+  }
+
   try {
     const body = await req.json();
     const { name, action, id } = body;

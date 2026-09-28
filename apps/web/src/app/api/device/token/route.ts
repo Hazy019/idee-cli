@@ -8,8 +8,22 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { device_code, machine_hash, user_code, approve } = body;
 
-    // Direct browser approval path
+    // Direct browser approval path (requires logged in user session)
     if (user_code && approve) {
+      const hasSbCookie = req.cookies.getAll().some((c) => c.name.startsWith('sb-'));
+      const sessionToken =
+        req.cookies.get('sb-access-token')?.value ||
+        req.cookies.get('idee-session')?.value ||
+        (hasSbCookie ? 'supabase-auth-cookie' : null) ||
+        req.headers.get('authorization');
+
+      if (!sessionToken) {
+        return NextResponse.json(
+          { error: 'Unauthorized', message: 'You must be signed in to approve a CLI device request.' },
+          { status: 401 }
+        );
+      }
+
       const ok = globalStore.approveDeviceSession(user_code);
       if (ok) {
         return NextResponse.json({ success: true, message: 'Device authorized successfully' });

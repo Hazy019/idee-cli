@@ -23,7 +23,9 @@ export function loadAndMergeConfig(options: LoadConfigOptions = {}): MergeResult
     options.overridePath || path.join(os.homedir(), '.ideefy', 'local-override.json');
 
   if (!fs.existsSync(baselineFile)) {
-    throw new Error(`Baseline config file not found: ${baselineFile}`);
+    throw new Error(
+      `Baseline configuration file not found at: ${baselineFile}\nTo generate a starter baseline file, run: idee init`
+    );
   }
 
   let baselineData: TeamSetup;

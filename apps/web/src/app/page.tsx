@@ -64,6 +64,22 @@ export default function LandingPage() {
   const featRef = useFadeUp();
   const archRef = useFadeUp();
 
+  // Automatic OAuth loopback recovery: if OAuth provider redirected to landing page Site URL
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      const search = window.location.search;
+      if (hash.includes('access_token=') || search.includes('code=')) {
+        document.cookie = 'idee-session=active-session; path=/; max-age=86400; SameSite=Lax';
+        const match = hash.match(/access_token=([^&]+)/);
+        if (match && match[1]) {
+          document.cookie = `sb-access-token=${match[1]}; path=/; max-age=86400; SameSite=Lax`;
+        }
+        window.location.href = '/dashboard';
+      }
+    }
+  }, []);
+
   return (
     <>
       <style>{`

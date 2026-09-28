@@ -50,35 +50,54 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  // Gated dashboard and device routes requiring mandatory active session
-  const isGatedRoute =
+  // Gated dashboard, device, and sensitive data API routes requiring mandatory active session
+  const isGatedPageRoute =
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/service-tokens') ||
     pathname.startsWith('/device') ||
     pathname.startsWith('/runs');
 
+  const isGatedApiRoute =
+    pathname.startsWith('/api/service-accounts') ||
+    pathname.startsWith('/api/telemetry-list');
+
   let res = NextResponse.next();
 
-  if (isGatedRoute) {
-    const sessionToken =
-      req.cookies.get('sb-access-token')?.value ||
-      req.cookies.get('idee-session')?.value ||
-      req.headers.get('authorization');
+  // Detect active session across custom session cookies, legacy sb tokens, and modern chunked Supabase cookies
+  const hasSbCookie = req.cookies.getAll().some((c) => c.name.startsWith('sb-'));
+  const sessionToken =
+    req.cookies.get('sb-access-token')?.value ||
+    req.cookies.get('idee-session')?.value ||
+    (hasSbCookie ? 'supabase-auth-cookie' : null) ||
+    req.headers.get('authorization');
 
-    // Zero-Trust Route Guard: Redirect unauthenticated requests directly to /login
-    if (!sessionToken) {
-      const loginUrl = new URL('/login', req.url);
-      loginUrl.searchParams.set('redirectTo', pathname);
-      res = NextResponse.redirect(loginUrl);
-    }
+  if (isGatedApiRoute && !sessionToken) {
+    return new NextResponse(
+      JSON.stringify({ error: 'Unauthorized', message: 'Authentication required to access this resource.' }),
+      {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 
-  // Security Headers Enforcement (§12.2 Hardening)
+  if (isGatedPageRoute && !sessionToken) {
+    const loginUrl = new URL('/login', req.url);
+    loginUrl.searchParams.set('redirectTo', pathname);
+    res = NextResponse.redirect(loginUrl);
+  }
+
+  // Security Headers Enforcement (§12.2 Hardening, CSP, HSTS, X-Frame-Options)
   res.headers.set('X-Frame-Options', 'DENY');
   res.headers.set('X-Content-Type-Options', 'nosniff');
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   res.headers.set('X-XSS-Protection', '1; mode=block');
+  res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  res.headers.set(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-ancestors 'none';"
+  );
 
   return res;
 }

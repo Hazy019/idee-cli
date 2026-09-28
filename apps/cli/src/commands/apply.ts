@@ -27,6 +27,12 @@ export default class ApplyCommand extends Command {
     const startTime = Date.now();
 
     try {
+      if (process.platform !== 'win32' && !flags['dry-run']) {
+        this.warn(
+          'Notice: Winget package engine requires Windows. If running in CI or non-Windows, consider using --dry-run.'
+        );
+      }
+
       // 1. Pre-flight config validation & merge (fails fast before any process spawns)
       const { mergedPackages, overridePackageIds } = loadAndMergeConfig({
         baselinePath: flags.config,

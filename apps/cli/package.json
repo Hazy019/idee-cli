@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Windows-native developer environment engine",
   "bin": {
-    "idee": "./bin/run.js"
+    "idee": "./bin/run.js",
+    "idee-cli": "./bin/run.js"
   },
   "type": "module",
   "scripts": {
