@@ -10,14 +10,42 @@ interface MemberAvatar {
   hash: string;
 }
 
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+
 export function AppHeader() {
   const pathname = usePathname();
   const [activeMembers, setActiveMembers] = useState<MemberAvatar[]>([]);
 
+  const handleSignOut = async () => {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch {
+        // Continue clearing cookies even if Supabase call fails
+      }
+    }
+    // Clear all session-related cookies
+    document.cookie = 'idee-session=; path=/; max-age=0; SameSite=Lax';
+    document.cookie = 'sb-access-token=; path=/; max-age=0; SameSite=Lax';
+    if (typeof document !== 'undefined') {
+      document.cookie.split(';').forEach((c) => {
+        const key = c.split('=')[0].trim();
+        if (key.startsWith('sb-')) {
+          document.cookie = `${key}=; path=/; max-age=0; SameSite=Lax`;
+        }
+      });
+    }
+    window.location.replace('/login');
+  };
+
   useEffect(() => {
     fetch('/api/telemetry-list')
-      .then((res) => res.json())
+      .then(async (res) => {
+        if (res.status === 401) return null; // Not authenticated, skip silently
+        return res.json();
+      })
       .then((data) => {
+        if (!data) return;
         if (data.logs && Array.isArray(data.logs) && data.logs.length > 0) {
           const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).getTime();
           
@@ -50,7 +78,7 @@ export function AppHeader() {
         
         {/* Brand Logo & Navigation */}
         <div className="flex items-center space-x-6">
-          <Link href="/" className="flex items-center space-x-3">
+          <Link href="/dashboard" className="flex items-center space-x-3" title="Back to Dashboard">
             <LightbulbLogo size="sm" />
             <span className="font-extrabold text-lg text-[#002B2B] tracking-tight">IDEE-CLI</span>
           </Link>
@@ -76,6 +104,12 @@ export function AppHeader() {
               }`}
             >
               [Service Tokens]
+            </Link>
+            <Link
+              href="/"
+              className="px-3 py-1.5 rounded-xl text-[#002B2B]/60 hover:text-[#002B2B] transition-colors"
+            >
+              Website ↗
             </Link>
           </nav>
         </div>
@@ -107,12 +141,12 @@ export function AppHeader() {
             </div>
           )}
 
-          <Link
-            href="/login"
+          <button
+            onClick={handleSignOut}
             className="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-white text-[#002B2B] border-2 border-[#002B2B] hover:bg-red-500/10 hover:text-red-700 transition-colors"
           >
             [Sign Out]
-          </Link>
+          </button>
         </div>
       </div>
     </header>

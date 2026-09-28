@@ -63,19 +63,33 @@ export default function LandingPage() {
   const howRef = useFadeUp();
   const featRef = useFadeUp();
   const archRef = useFadeUp();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // Automatic OAuth loopback recovery: if OAuth provider redirected to landing page Site URL
+  // Check if user has an active session
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const cookies = document.cookie;
+      const hasSession =
+        cookies.includes('idee-session=active') ||
+        cookies.split(';').some((c) => c.trim().startsWith('sb-') && c.includes('=') && c.split('=')[1].trim().length > 0);
+      setIsLoggedIn(hasSession);
+    }
+  }, []);
+
+  // OAuth loopback recovery: if the Supabase Site URL is set to the root `/`
+  // instead of the callback URL, Google/GitHub redirects here with ?code=
+  // We forward it to the proper server-side callback handler.
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const hash = window.location.hash;
       const search = window.location.search;
-      if (hash.includes('access_token=') || search.includes('code=')) {
-        document.cookie = 'idee-session=active-session; path=/; max-age=86400; SameSite=Lax';
-        const match = hash.match(/access_token=([^&]+)/);
-        if (match && match[1]) {
-          document.cookie = `sb-access-token=${match[1]}; path=/; max-age=86400; SameSite=Lax`;
-        }
-        window.location.href = '/dashboard';
+      const hash = window.location.hash;
+      if (search.includes('code=')) {
+        // Forward to server-side callback which does the proper PKCE exchange
+        window.location.replace(`/api/auth/callback${search}&next=/dashboard`);
+      } else if (hash.includes('access_token=')) {
+        // Legacy implicit flow (no longer recommended but handle gracefully)
+        document.cookie = 'idee-session=active; path=/; max-age=604800; SameSite=Lax';
+        window.location.replace('/dashboard');
       }
     }
   }, []);
@@ -120,20 +134,31 @@ export default function LandingPage() {
               </a>
             </nav>
 
-            {/* Distinct Header Actions: Sign In (Login) & Get Started (Signup) */}
+            {/* Distinct Header Actions: Logged In vs Logged Out */}
             <div className="flex items-center space-x-4">
-              <Link
-                href="/login"
-                className="text-sm font-semibold text-[#002B2B]/80 hover:text-[#002B2B] transition-colors"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/signup"
-                className="px-5 py-2.5 text-xs font-extrabold rounded-full bg-[#88FF44] hover:bg-[#77EE33] text-[#002B2B] border border-[#002B2B] shadow-[2px_3px_0px_#002B2B] transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#002B2B]"
-              >
-                [Get Started]
-              </Link>
+              {isLoggedIn ? (
+                <Link
+                  href="/dashboard"
+                  className="px-5 py-2.5 text-xs font-extrabold rounded-full bg-[#88FF44] hover:bg-[#77EE33] text-[#002B2B] border border-[#002B2B] shadow-[2px_3px_0px_#002B2B] transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#002B2B]"
+                >
+                  [Go to Dashboard &rarr;]
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="text-sm font-semibold text-[#002B2B]/80 hover:text-[#002B2B] transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="px-5 py-2.5 text-xs font-extrabold rounded-full bg-[#88FF44] hover:bg-[#77EE33] text-[#002B2B] border border-[#002B2B] shadow-[2px_3px_0px_#002B2B] transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#002B2B]"
+                  >
+                    [Get Started]
+                  </Link>
+                </>
+              )}
               
               {/* Mobile hamburger */}
               <button
@@ -157,8 +182,14 @@ export default function LandingPage() {
               <Link href="/docs" onClick={() => setMenuOpen(false)} className="text-[#002B2B]/80">Docs</Link>
               <a href="https://github.com/Hazy019/idee-cli" target="_blank" rel="noreferrer" className="text-[#002B2B]/80">GitHub Repo ↗</a>
               <div className="pt-2 border-t border-[#002B2B]/10 flex flex-col space-y-2">
-                <Link href="/login" onClick={() => setMenuOpen(false)} className="text-[#002B2B]/80">Sign In</Link>
-                <Link href="/signup" onClick={() => setMenuOpen(false)} className="font-bold text-[#002B2B]">[Get Started]</Link>
+                {isLoggedIn ? (
+                  <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="font-bold text-[#002B2B]">[Go to Dashboard &rarr;]</Link>
+                ) : (
+                  <>
+                    <Link href="/login" onClick={() => setMenuOpen(false)} className="text-[#002B2B]/80">Sign In</Link>
+                    <Link href="/signup" onClick={() => setMenuOpen(false)} className="font-bold text-[#002B2B]">[Get Started]</Link>
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -205,10 +236,10 @@ export default function LandingPage() {
                 </button>
 
                 <Link
-                  href="/signup"
+                  href={isLoggedIn ? "/dashboard" : "/signup"}
                   className="px-6 py-3 text-sm font-extrabold rounded-xl bg-[#88FF44] text-[#002B2B] border border-[#002B2B] shadow-[3px_4px_0px_#002B2B] hover:bg-[#77EE33] transition-all"
                 >
-                  Get Started &rarr;
+                  {isLoggedIn ? "Open Dashboard \u2192" : "Get Started \u2192"}
                 </Link>
               </div>
             </div>
@@ -227,7 +258,7 @@ export default function LandingPage() {
                     <p className="text-xs text-[#002B2B]/70 mt-0.5">Inclusive team status grid</p>
                   </div>
                   <Link
-                    href="/login"
+                    href="/dashboard"
                     className="px-3 py-1.5 text-xs font-bold rounded-lg bg-[#88FF44] text-[#002B2B] border border-[#002B2B]"
                   >
                     Open Dashboard
@@ -343,10 +374,10 @@ export default function LandingPage() {
 
             <div className="text-center mt-6">
               <Link
-                href="/login"
+                href={isLoggedIn ? "/dashboard" : "/login"}
                 className="inline-flex items-center space-x-2 px-8 py-3.5 text-sm font-extrabold rounded-full bg-[#88FF44] text-[#002B2B] border-2 border-[#002B2B] shadow-[4px_4px_0px_#002B2B] hover:bg-[#77EE33] hover:-translate-y-1 transition-all"
               >
-                <span>Sign In to Dashboard</span>
+                <span>{isLoggedIn ? "Open Fleet Dashboard" : "Sign In to Dashboard"}</span>
                 <span className="w-5 h-5 rounded-full bg-[#002B2B] text-white flex items-center justify-center text-xs">
                   &gt;
                 </span>

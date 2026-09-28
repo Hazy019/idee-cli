@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { LightbulbLogo } from '@/components/LightbulbLogo';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
@@ -15,6 +15,19 @@ export default function SignupPage() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Bypass signup if already authenticated
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const cookies = document.cookie;
+      const hasSession =
+        cookies.includes('idee-session=active') ||
+        cookies.split(';').some((c) => c.trim().startsWith('sb-') && c.includes('=') && c.split('=')[1].trim().length > 0);
+      if (hasSession) {
+        window.location.replace('/dashboard');
+      }
+    }
+  }, []);
 
   const passwordStrength = useMemo(() => {
     if (!password) return { score: 0, label: '', color: '' };
@@ -72,19 +85,20 @@ export default function SignupPage() {
 
         if (error) throw error;
 
-        document.cookie = 'idee-session=active-session; path=/; max-age=86400';
-
         if (data.session) {
-          window.location.href = '/dashboard';
+          // Signed in immediately (email confirmation disabled)
+          document.cookie = 'idee-session=active; path=/; max-age=604800; SameSite=Lax';
+          window.location.replace('/dashboard');
         } else {
-          setSuccessMessage('Account registered successfully! Check your email to confirm registration or sign in directly.');
+          setSuccessMessage('Account registered! Check your email to confirm registration, then sign in.');
           setIsRegistering(false);
         }
       } else {
-        document.cookie = 'idee-session=active-session; path=/; max-age=86400';
+        // Demo mode
+        document.cookie = 'idee-session=active; path=/; max-age=604800; SameSite=Lax';
         setTimeout(() => {
-          window.location.href = '/dashboard';
-        }, 600);
+          window.location.replace('/dashboard');
+        }, 300);
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to register account.');
@@ -93,7 +107,7 @@ export default function SignupPage() {
   };
 
   const handleOAuth = async (provider: 'github' | 'google') => {
-    document.cookie = 'idee-session=active-session; path=/; max-age=86400';
+    // Do NOT set cookie here — the callback handler does it after real exchange
     if (isSupabaseConfigured && supabase) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
@@ -103,7 +117,8 @@ export default function SignupPage() {
       });
       if (error) setErrorMessage(error.message);
     } else {
-      window.location.href = '/dashboard';
+      document.cookie = 'idee-session=active; path=/; max-age=604800; SameSite=Lax';
+      window.location.replace('/dashboard');
     }
   };
 

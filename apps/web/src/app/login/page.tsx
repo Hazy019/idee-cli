@@ -1,17 +1,41 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { LightbulbLogo } from '@/components/LightbulbLogo';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loggingIn, setLoggingIn] = useState(false);
   const [cooldown, setCooldown] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Read optional redirectTo destination (set by middleware when bouncing unauthenticated users)
+  const redirectTo = searchParams.get('redirectTo') || '/dashboard';
+
+  // Detect error messages passed back from the OAuth callback
+  useEffect(() => {
+    const err = searchParams.get('error');
+    if (err) setErrorMessage(decodeURIComponent(err));
+  }, [searchParams]);
+
+  // Bypass login page if the user already has a valid session
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const cookies = document.cookie;
+      const hasSession =
+        cookies.includes('idee-session=active') ||
+        cookies.split(';').some((c) => c.trim().startsWith('sb-') && c.includes('=') && c.split('=')[1].length > 0);
+      if (hasSession) {
+        window.location.replace(redirectTo);
+      }
+    }
+  }, [redirectTo]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,20 +50,23 @@ export default function LoginPage() {
 
     try {
       if (isSupabaseConfigured && supabase) {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabase.auth.signInWithPassword({
           email: username,
           password,
         });
 
         if (error) throw error;
 
-        document.cookie = 'idee-session=active-session; path=/; max-age=86400';
-        window.location.href = '/dashboard';
+        // The Supabase browser client writes sb-* cookies automatically after
+        // signInWithPassword. Set a lightweight sentinel for our middleware fast-path.
+        document.cookie = 'idee-session=active; path=/; max-age=604800; SameSite=Lax';
+        window.location.replace(redirectTo);
       } else {
-        document.cookie = 'idee-session=active-session; path=/; max-age=86400';
+        // Demo mode: simulate a session
+        document.cookie = 'idee-session=active; path=/; max-age=604800; SameSite=Lax';
         setTimeout(() => {
-          window.location.href = '/dashboard';
-        }, 600);
+          window.location.replace(redirectTo);
+        }, 300);
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Invalid email or password.');
@@ -48,17 +75,24 @@ export default function LoginPage() {
   };
 
   const handleOAuth = async (provider: 'github' | 'google') => {
-    document.cookie = 'idee-session=active-session; path=/; max-age=86400';
+    // Do NOT set session cookie here — the callback route does that after
+    // the real code exchange. Setting it early causes a false-positive session
+    // that makes the login loop when the exchange later fails.
     if (isSupabaseConfigured && supabase) {
+      // Forward the intended destination through the callback so the user
+      // lands on the right page after OAuth completes.
+      const callbackUrl = `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(redirectTo)}`;
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/api/auth/callback?next=/dashboard`,
+          redirectTo: callbackUrl,
         },
       });
       if (error) setErrorMessage(error.message);
     } else {
-      window.location.href = '/dashboard';
+      // Demo mode
+      document.cookie = 'idee-session=active; path=/; max-age=604800; SameSite=Lax';
+      window.location.replace(redirectTo);
     }
   };
 

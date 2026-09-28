@@ -1,3 +1,4 @@
+import { exec } from 'node:child_process';
 import { Command, Flags } from '@oclif/core';
 import {
   computeDiff,
@@ -18,8 +19,19 @@ export default class ApplyCommand extends Command {
     override: Flags.string({ char: 'o', description: 'Path to local-override.json' }),
     'dry-run': Flags.boolean({ description: 'Resolve and print queue without installing packages' }),
     json: Flags.boolean({ description: 'Output machine-readable JSON result' }),
-    'no-telemetry': Flags.boolean({ description: 'Skip posting telemetry report to dashboard' }),
-    'dashboard-url': Flags.string({ description: 'Custom dashboard server URL', env: 'IDEE_DASHBOARD_URL' }),
+    'dashboard-url': Flags.string({
+      description: 'Custom dashboard server URL',
+      default: 'https://idee-cli.vercel.app',
+      env: 'IDEE_DASHBOARD_URL',
+    }),
+    'no-telemetry': Flags.boolean({
+      description: 'Skip telemetry transmission',
+      default: false,
+    }),
+    open: Flags.boolean({
+      description: 'Automatically open dashboard website in browser after reconciliation',
+      default: false,
+    }),
   };
 
   async run(): Promise<void> {
@@ -135,6 +147,22 @@ export default class ApplyCommand extends Command {
           await sendTelemetry(telemetryPayload, auth.token, dashboardUrl);
         } catch (authErr: any) {
           this.warn(`Telemetry skipped: ${authErr.message}`);
+        }
+      }
+
+      if (flags.open) {
+        const dashboardUrl = flags['dashboard-url'] || process.env.IDEE_DASHBOARD_URL || 'https://idee-cli.vercel.app';
+        this.log(`Opening dashboard at ${dashboardUrl}...`);
+        try {
+          if (process.platform === 'win32') {
+            exec(`start "" "${dashboardUrl}"`);
+          } else if (process.platform === 'darwin') {
+            exec(`open "${dashboardUrl}"`);
+          } else {
+            exec(`xdg-open "${dashboardUrl}"`);
+          }
+        } catch {
+          // ignore failure to launch browser
         }
       }
 

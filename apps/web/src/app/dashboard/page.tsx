@@ -47,11 +47,31 @@ export default function DashboardPage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const pageSize = 5;
 
+  const handleSignOut = async () => {
+    // Clear all session cookies
+    document.cookie = 'idee-session=; path=/; max-age=0; SameSite=Lax';
+    document.cookie = 'sb-access-token=; path=/; max-age=0; SameSite=Lax';
+    // Also call Supabase signOut if configured (clears sb-* cookies server-side)
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      if (supabase) await supabase.auth.signOut();
+    } catch {}
+    window.location.replace('/login');
+  };
+
   useEffect(() => {
     setMounted(true);
     fetch('/api/telemetry-list')
-      .then((res) => res.json())
+      .then(async (res) => {
+        if (res.status === 401) {
+          // Session expired or invalid — send back to login
+          window.location.replace('/login?error=Session+expired.+Please+sign+in+again.');
+          return null;
+        }
+        return res.json();
+      })
       .then((data) => {
+        if (!data) return;
         if (data.logs && Array.isArray(data.logs)) {
           setLogs(data.logs);
         } else {

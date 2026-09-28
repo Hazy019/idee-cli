@@ -146,17 +146,21 @@ npm run test
 
 ## 💻 CLI Command Reference (`idee`)
 
-The CLI can be run using `npx idee` or directly via Node `node apps/cli/bin/run.js`.
+The CLI can be run globally via NPX:
+```powershell
+npx @hazy019/idee-cli apply
+```
+Or locally via Node `node apps/cli/bin/run.js` / globally linked `idee`.
 
 ### 1. `idee plan`
 Calculates and displays the topological execution plan without performing any installations.
 
 ```powershell
 # Human-readable plan
-npx idee plan --config ./team-setup.json
+npx @hazy019/idee-cli plan --config ./team-setup.json
 
 # Output in machine-readable JSON
-npx idee plan --config ./team-setup.json --json
+npx @hazy019/idee-cli plan --config ./team-setup.json --json
 ```
 
 **JSON Output Example:**
@@ -180,10 +184,10 @@ Performs a read-only audit comparing target baseline requirements against curren
 
 ```powershell
 # Human-readable audit report
-npx idee audit --config ./team-setup.json
+npx @hazy019/idee-cli audit --config ./team-setup.json
 
 # Machine-readable JSON output
-npx idee audit --config ./team-setup.json --json
+npx @hazy019/idee-cli audit --config ./team-setup.json --json
 ```
 
 **Sample Output:**
@@ -207,16 +211,16 @@ Executes the reconciliation loop: installs missing packages in topological order
 
 ```powershell
 # Standard reconciliation
-npx idee apply --config ./team-setup.json
+npx @hazy019/idee-cli apply --config ./team-setup.json
 
 # Dry-run mode (computes plan without executing installs)
-npx idee apply --config ./team-setup.json --dry-run
+npx @hazy019/idee-cli apply --config ./team-setup.json --dry-run
 
 # Run without sending telemetry
-npx idee apply --config ./team-setup.json --no-telemetry
+npx @hazy019/idee-cli apply --config ./team-setup.json --no-telemetry
 
 # Custom dashboard endpoint
-npx idee apply --config ./team-setup.json --dashboard-url http://localhost:3000
+npx @hazy019/idee-cli apply --config ./team-setup.json --dashboard-url http://localhost:3000
 ```
 
 ---
@@ -226,10 +230,10 @@ Authenticates the CLI session with the central dashboard via OAuth 2.0 Device Fl
 
 ```powershell
 # Authenticate interactive session
-npx idee login --dashboard-url http://localhost:3000
+npx @hazy019/idee-cli login --dashboard-url http://localhost:3000
 
 # Clear stored credentials
-npx idee logout
+npx @hazy019/idee-cli logout
 ```
 
 ---
@@ -392,16 +396,16 @@ jobs:
         run: npm run build
 
       - name: Validate Dependency Graph & Plan
-        run: npx idee plan --config ./team-setup.json --json
+        run: npx @hazy019/idee-cli plan --config ./team-setup.json --json
 
       - name: Perform Host Audit
-        run: npx idee audit --config ./team-setup.json --json
+        run: npx @hazy019/idee-cli audit --config ./team-setup.json --json
 
       - name: Reconcile in CI Mode
         env:
           IDEE_SERVICE_TOKEN: ${{ secrets.IDEE_SERVICE_TOKEN }}
           IDEE_DASHBOARD_URL: ${{ secrets.IDEE_DASHBOARD_URL }}
-        run: npx idee apply --config ./team-setup.json --dry-run
+        run: npx @hazy019/idee-cli apply --config ./team-setup.json --dry-run
 ```
 
 ---
