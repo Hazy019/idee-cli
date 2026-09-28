@@ -26,16 +26,26 @@ export default function LoginPage() {
 
   // Bypass login page if the user already has a valid session
   useEffect(() => {
-    if (typeof document !== 'undefined') {
+    const err = searchParams.get('error');
+    if (err) return; // Do not auto-redirect if an error was reported
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          window.location.replace(redirectTo);
+        } else if (typeof document !== 'undefined') {
+          // No active Supabase session: purge any stale sentinel cookie to prevent redirect loops
+          document.cookie = 'idee-session=; path=/; max-age=0; SameSite=Lax';
+        }
+      });
+    } else if (typeof document !== 'undefined') {
       const cookies = document.cookie;
-      const hasSession =
-        cookies.includes('idee-session=active') ||
-        cookies.split(';').some((c) => c.trim().startsWith('sb-') && c.includes('=') && c.split('=')[1].length > 0);
+      const hasSession = cookies.includes('idee-session=active');
       if (hasSession) {
         window.location.replace(redirectTo);
       }
     }
-  }, [redirectTo]);
+  }, [redirectTo, searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

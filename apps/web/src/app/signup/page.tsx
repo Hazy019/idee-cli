@@ -18,11 +18,17 @@ export default function SignupPage() {
 
   // Bypass signup if already authenticated
   useEffect(() => {
-    if (typeof document !== 'undefined') {
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          window.location.replace('/dashboard');
+        } else if (typeof document !== 'undefined') {
+          document.cookie = 'idee-session=; path=/; max-age=0; SameSite=Lax';
+        }
+      });
+    } else if (typeof document !== 'undefined') {
       const cookies = document.cookie;
-      const hasSession =
-        cookies.includes('idee-session=active') ||
-        cookies.split(';').some((c) => c.trim().startsWith('sb-') && c.includes('=') && c.split('=')[1].trim().length > 0);
+      const hasSession = cookies.includes('idee-session=active');
       if (hasSession) {
         window.location.replace('/dashboard');
       }

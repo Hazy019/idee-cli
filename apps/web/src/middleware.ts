@@ -115,30 +115,36 @@ export async function middleware(req: NextRequest) {
 
   // ── 3. Session verification ─────────────────────────────────────────────────
   let isAuthenticated = false;
+  let res = NextResponse.next({ request: { headers: req.headers } });
 
   if (isSupabaseConfigured && supabaseUrl && supabaseAnonKey) {
-    // Build a mutable response that the SSR client can stamp refreshed cookies onto.
-    const res = NextResponse.next({ request: { headers: req.headers } });
-
     const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
-        get(name: string) {
-          return req.cookies.get(name)?.value;
+        getAll() {
+          return req.cookies.getAll();
         },
-        set(name: string, value: string, options: CookieOptions) {
-          // Keep the request and response cookies in sync so token refreshes propagate.
-          req.cookies.set({ name, value });
-          res.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options: CookieOptions) {
-          req.cookies.set({ name, value: '' });
-          res.cookies.set({ name, value: '', ...options });
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
+          res = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            res.cookies.set(name, value, options)
+          );
         },
       },
     });
 
     const { data: { user } } = await supabase.auth.getUser();
     isAuthenticated = Boolean(user);
+
+    // Fallback: Check lightweight sentinel cookie for demo sessions
+    if (!isAuthenticated) {
+      const sentinel = req.cookies.get('idee-session')?.value;
+      isAuthenticated = sentinel === 'active' || sentinel === 'active-session';
+    }
 
     if (isAuthenticated) {
       applySecurityHeaders(res);
@@ -153,23 +159,25 @@ export async function middleware(req: NextRequest) {
   // ── 4. Block unauthenticated access ────────────────────────────────────────
   if (!isAuthenticated) {
     if (isGatedApiRoute(pathname)) {
-      const res = NextResponse.json(
+      const apiRes = NextResponse.json(
         { error: 'Unauthorized', message: 'Authentication required to access this resource.' },
         { status: 401 }
       );
-      applySecurityHeaders(res);
-      return res;
+      applySecurityHeaders(apiRes);
+      return apiRes;
     }
 
-    // Page route: redirect to login with a `redirectTo` so we return after auth
+    // Page route: redirect to login with a `redirectTo`
     const loginUrl = new URL('/login', req.url);
     loginUrl.searchParams.set('redirectTo', pathname);
-    const res = NextResponse.redirect(loginUrl);
-    applySecurityHeaders(res);
-    return res;
+    const redirectRes = NextResponse.redirect(loginUrl);
+    
+    // Clear stale sentinel cookie to prevent infinite redirect loops on client-side
+    redirectRes.cookies.set('idee-session', '', { path: '/', maxAge: 0 });
+    applySecurityHeaders(redirectRes);
+    return redirectRes;
   }
 
-  const res = NextResponse.next();
   applySecurityHeaders(res);
   return res;
 }

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { LightbulbLogo } from '@/components/LightbulbLogo';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 /* ─── Intersection-observer hook for scroll-triggered fade-up ─── */
 function useFadeUp(threshold = 0.12) {
@@ -67,11 +68,17 @@ export default function LandingPage() {
 
   // Check if user has an active session
   useEffect(() => {
-    if (typeof document !== 'undefined') {
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setIsLoggedIn(Boolean(session));
+      });
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setIsLoggedIn(Boolean(session));
+      });
+      return () => subscription.unsubscribe();
+    } else if (typeof document !== 'undefined') {
       const cookies = document.cookie;
-      const hasSession =
-        cookies.includes('idee-session=active') ||
-        cookies.split(';').some((c) => c.trim().startsWith('sb-') && c.includes('=') && c.split('=')[1].trim().length > 0);
+      const hasSession = cookies.includes('idee-session=active');
       setIsLoggedIn(hasSession);
     }
   }, []);
